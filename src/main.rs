@@ -2,16 +2,11 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 use std::io::{self, BufRead};
-use std::{
-    collections::{HashMap, HashSet},
-    fs::File,
-};
+use std::{collections::HashMap, fs::File};
 
 const FILENAME: &str = "house-votes-84.data";
 const ATTRIBUTES_COUNT: usize = 16;
 const CROSSVALIDATION_SPLITS: usize = 10;
-const CHOICES_COUNT: usize = 3;
-const CLASSES_COUNT: usize = 2;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum Choice {
@@ -50,13 +45,11 @@ fn split_for_crossvalidation(mut data: Vec<Row>) -> Vec<Vec<Row>> {
     let remainder = data.len() % CROSSVALIDATION_SPLITS;
 
     let mut res: Vec<Vec<Row>> = data.chunks_exact(chunk_size).map(|x| x.to_vec()).collect();
-    let mut res_counter = 0;
     let res_len = res.len();
 
     // Add remainders
     for i in 0..remainder {
-        res[res_counter].push(data[res_len + i].clone());
-        res_counter += 1;
+        res[i].push(data[res_len + i].clone());
     }
 
     res
@@ -69,7 +62,7 @@ fn read_input() -> Vec<Row> {
 
     for line in lines {
         let line = line.expect("Couldn't read line");
-        let split_line: Vec<&str> = line.split(",").collect();
+        let split_line: Vec<&str> = line.split(',').collect();
 
         let class = match split_line[0] {
             "republican" => Class::Republican,
@@ -95,7 +88,7 @@ struct Model {
 }
 
 impl Model {
-    fn new(data: &Vec<&Row>) -> Self {
+    fn new(data: &[&Row]) -> Self {
         let mut attr_probs: HashMap<Class, Vec<HashMap<Choice, f64>>> = HashMap::new();
         let mut class_probs: HashMap<Class, f64> = HashMap::new();
 
@@ -103,7 +96,7 @@ impl Model {
         attr_probs.insert(Class::Democrat, vec![]);
 
         // Zero out all attribute probabilities
-        for (_, attrs) in &mut attr_probs {
+        for attrs in attr_probs.values_mut() {
             for _ in 0..ATTRIBUTES_COUNT {
                 let mut new_hashmap = HashMap::new();
                 new_hashmap.insert(Choice::Yes, 1f64 / data.len() as f64);
@@ -118,9 +111,9 @@ impl Model {
 
         for row in data {
             if row.class == Class::Republican {
-                republicans_prob += 1 as f64 / data.len() as f64;
+                republicans_prob += 1f64 / data.len() as f64;
             } else {
-                democrats_prob += 1 as f64 / data.len() as f64;
+                democrats_prob += 1f64 / data.len() as f64;
             }
 
             for i in 0..ATTRIBUTES_COUNT {
@@ -163,11 +156,11 @@ impl Model {
         Class::Democrat
     }
 
-    fn get_accuracy(&self, testing_set: &Vec<Row>) -> f64 {
+    fn get_accuracy(&self, testing_set: &[Row]) -> f64 {
         let mut res = 0f64;
 
         for row in testing_set {
-            let prediction = self.predict(&row);
+            let prediction = self.predict(row);
 
             if prediction == row.class {
                 res += 1f64 / testing_set.len() as f64;
